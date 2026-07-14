@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>examen — koncept aplikace</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1220">
+<link rel="icon" href="icon-192.png">
+
+<!-- iOS Safari: bez tohohle standalone režim na iPhone nefunguje -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="examen">
+<link rel="apple-touch-icon" href="icon-180.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1220;
+    --dusk:#16213E;
+    --dusk-2:#1E2C4F;
+    --twilight:#4A5A8C;
+    --twilight-soft:#8593BE;
+    --ember:#E8A25C;
+    --ember-soft:#F3C68C;
+    --moonlight:#F4F1E8;
+    --moonlight-dim:#D8D4C6;
+    --sage:#6FA08F;
+    --sage-soft:#9DC4B7;
+    --ink-text:#EDEAE0;
+    --muted-text:rgba(237,234,224,0.56);
+    --card:rgba(244,241,232,0.06);
+    --card-line:rgba(244,241,232,0.12);
+    --serif:'Fraunces', Georgia, serif;
+    --sans:'Manrope', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--sans);
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(74,90,140,0.25), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 85% 90%, rgba(232,162,92,0.08), transparent 60%),
+      var(--ink);
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:48px 20px;
+    overflow-x:hidden;
+    position:relative;
+  }
+  .page-stars{position:fixed; inset:0; pointer-events:none; z-index:0;}
+  .page-star{position:absolute; width:2px; height:2px; border-radius:50%; background:var(--moonlight); animation:twinkle 5s ease-in-out infinite;}
+
+  .top-row{
+    display:flex; align-items:center; gap:18px; margin-bottom:34px; position:relative; z-index:1; flex-wrap:wrap; justify-content:center;
+  }
+  .brand-mark{display:flex; align-items:center; gap:10px;}
+  .brand-mark .ring{
+    width:26px; height:26px; border-radius:50%; border:1.5px solid var(--ember-soft);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .brand-mark .ring::after{content:""; width:5px; height:5px; border-radius:50%; background:var(--ember-soft);}
+  .brand-mark span{
+    font-family:'Fraunces', Georgia, serif; font-size:20px; letter-spacing:4px; color:var(--moonlight); text-transform:lowercase;
+  }
+  .lang-select{
+    appearance:none; -webkit-appearance:none;
+    background:var(--card); border:1px solid var(--card-line); color:var(--ink-text);
+    font-family:var(--sans); font-size:12px; padding:8px 14px; border-radius:10px; cursor:pointer;
+    letter-spacing:.3px;
+  }
+  .lang-select:focus{outline:1px solid var(--ember-soft);}
+
+  /* ---------- PHONE FRAME ---------- */
+  .phone{
+    position:relative; z-index:1;
+    width:340px; height:700px;
+    background:linear-gradient(160deg, #1A1F2E, #0C0F16);
+    border-radius:46px;
+    padding:14px;
+    box-shadow:
+      0 40px 100px -20px rgba(0,0,0,0.7),
+      0 0 0 1px rgba(244,241,232,0.06),
+      inset 0 0 0 1px rgba(244,241,232,0.04);
+  }
+  .notch{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    width:100px; height:22px; background:#0B0F16; border-radius:14px; z-index:5;
+  }
+  .screen{
+    position:relative; width:100%; height:100%;
+    background:var(--ink);
+    border-radius:34px;
+    overflow:hidden;
+  }
+
+  .scene{
+    position:absolute; inset:0;
+    opacity:0; pointer-events:none;
+    transition:opacity .7s ease;
+    display:flex; flex-direction:column;
+  }
+  .scene.active{opacity:1; pointer-events:auto;}
+
+  /* ---------- INTRO ---------- */
+  #intro{background:var(--ink);}
+  .intro-sky{position:absolute; inset:0; overflow:hidden;}
+  .ember-glow{
+    position:absolute; left:0; right:0; bottom:-40%; height:80%;
+    background:radial-gradient(ellipse 100% 70% at 50% 100%, rgba(232,162,92,0.55), rgba(232,162,92,0.1) 55%, transparent 75%);
+    animation:emberFade 3.2s ease-out .3s forwards;
+  }
+  .horizon-line{
+    position:absolute; left:0; right:0; bottom:34%; height:1px;
+    background:linear-gradient(90deg, transparent, rgba(244,241,232,0.35), transparent);
+    opacity:0; animation:lineFade 2s ease .4s forwards;
+  }
+  .moon{
+    position:absolute; left:50%; bottom:38%; width:46px; height:46px; margin-left:-23px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, var(--moonlight), var(--moonlight-dim));
+    box-shadow:0 0 40px rgba(244,241,232,0.35);
+    opacity:0; transform:translateY(50px);
+    animation:moonRise 2.4s cubic-bezier(.2,.8,.2,1) .8s forwards;
+  }
+  .star{position:absolute; width:2px; height:2px; border-radius:50%; background:var(--moonlight); opacity:0; animation:starIn 1.5s ease forwards;}
+  .intro-mark{
+    position:relative; z-index:2; margin:auto; text-align:center;
+    opacity:0; animation:markIn 1.6s ease 1.4s forwards;
+  }
+  .intro-mark .ring{
+    width:40px; height:40px; border-radius:50%; border:1.5px solid var(--moonlight);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 14px;
+  }
+  .intro-mark .ring::after{content:""; width:7px; height:7px; border-radius:50%; background:var(--moonlight);}
+  .intro-mark p{font-family:'Fraunces', Georgia, serif; font-size:22px; letter-spacing:5px; color:var(--moonlight); text-transform:lowercase;}
+  .intro-claim{
+    font-family:'Fraunces', Georgia, serif; font-style:italic; font-size:12.5px; letter-spacing:.3px;
+    color:var(--muted-text); margin-top:10px; max-width:210px; margin-left:auto; margin-right:auto; line-height:1.5;
+    opacity:0; animation:markIn 1.6s ease 2s forwards;
+  }
+  .intro-tap{
+    position:relative; z-index:2; text-align:center; margin-bottom:56px;
+    font-size:12px; letter-spacing:2px; color:var(--muted-text); text-transform:uppercase;
+    opacity:0; animation:markIn 1.4s ease 3.1s forwards;
+  }
+
+  @keyframes emberFade{0%{opacity:1;} 100%{opacity:.18;}}
+  @keyframes lineFade{to{opacity:1;}}
+  @keyframes moonRise{to{opacity:1; transform:translateY(0);}}
+  @keyframes starIn{to{opacity:.9;}}
+  @keyframes markIn{to{opacity:1;}}
+  @keyframes twinkle{0%,100%{opacity:.15;} 50%{opacity:.8;}}
+
+  /* ---------- SHARED APP CHROME ---------- */
+  .app-top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 22px 0;
+  }
+  .icon-btn{
+    width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:var(--card); border:1px solid var(--card-line); color:var(--muted-text);
+    cursor:pointer; font-size:14px; flex-shrink:0;
+  }
+  [dir="rtl"] .back-icon{transform:scaleX(-1);}
+  .dots{display:flex; gap:6px; align-items:center;}
+  .dots span{width:5px; height:5px; border-radius:50%; background:rgba(244,241,232,0.2); transition:all .3s;}
+  .dots span.on{background:var(--ember); width:14px; border-radius:3px;}
+
+  .toggle{
+    display:flex; background:var(--card); border:1px solid var(--card-line); border-radius:12px; padding:3px; gap:2px;
+  }
+  .toggle button{
+    flex:1; border:none; background:transparent; padding:8px 10px; font-size:11px; font-family:var(--sans); font-weight:600;
+    color:var(--muted-text); border-radius:9px; cursor:pointer; transition:all .35s ease; letter-spacing:.3px;
+  }
+  .toggle button.active{background:var(--twilight); color:var(--moonlight);}
+  .screen.mode-spiritual .toggle button.active{background:var(--ember); color:#241505;}
+
+  /* ---------- HOME ---------- */
+  #home .home-body{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; padding:20px 30px 40px;
+  }
+  .home-date p{font-family:'Fraunces', Georgia, serif; font-style:italic; font-size:14px; color:var(--muted-text); text-align:center;}
+  .home-date h1{font-family:'Fraunces', Georgia, serif; font-size:24px; font-weight:500; color:var(--ink-text); text-align:center; margin-top:2px;}
+
+  .breathe{position:relative; width:140px; height:140px; display:flex; align-items:center; justify-content:center;}
+  .breathe .ring{position:absolute; border-radius:50%; border:1px solid rgba(232,162,92,0.35);}
+  .breathe .r1{width:140px; height:140px; animation:pulse 5s ease-in-out infinite;}
+  .breathe .r2{width:100px; height:100px; animation:pulse 5s ease-in-out infinite .4s;}
+  .breathe .r3{width:64px; height:64px; background:radial-gradient(circle at 35% 35%, var(--ember-soft), var(--ember)); border:none; box-shadow:0 0 30px rgba(232,162,92,0.4);}
+  @keyframes pulse{0%,100%{transform:scale(1); opacity:.5;} 50%{transform:scale(1.08); opacity:1;}}
+
+  .cta{
+    width:100%; border:none; border-radius:16px; padding:16px; font-family:var(--sans); font-weight:600; font-size:14px;
+    background:linear-gradient(135deg, var(--ember-soft), var(--ember));
+    color:#2A1706; cursor:pointer; letter-spacing:.2px;
+    box-shadow:0 12px 24px -8px rgba(232,162,92,0.45);
+    transition:transform .15s ease;
+  }
+  .cta:active{transform:scale(.97);}
+  .cta-ghost{
+    background:transparent; border:1px solid var(--card-line); color:var(--muted-text); box-shadow:none;
+  }
+
+  /* ---------- REFLECT ---------- */
+  .reflect-body{flex:1; display:flex; flex-direction:column; padding:26px 24px 24px;}
+  .step-eyebrow{font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted-text); margin-bottom:10px;}
+  .step-q{font-family:'Fraunces', Georgia, serif; font-size:19px; line-height:1.4; color:var(--ink-text); margin-bottom:8px;}
+  .step-q-spirit{
+    font-family:'Fraunces', Georgia, serif; font-style:italic; font-size:15px; color:var(--ember-soft); margin-bottom:16px;
+    max-height:0; opacity:0; overflow:hidden; transition:all .4s ease;
+  }
+  .screen.mode-spiritual .step-q-spirit{max-height:80px; opacity:1;}
+  .step-input{
+    width:100%; min-height:64px; flex:0 0 auto; border:1px solid var(--card-line); border-radius:14px; padding:12px 14px;
+    background:var(--card); color:var(--ink-text); font-size:13px; font-family:var(--sans); line-height:1.6;
+    resize:none; outline:none; transition:border-color .3s ease;
+  }
+  .step-input::placeholder{color:var(--muted-text);}
+  .step-input:focus{border-color:var(--ember-soft);}
+
+  .ai-mirror{margin-top:12px; display:flex; flex-direction:column; gap:8px;}
+  .ai-mirror-head{display:flex; align-items:center; justify-content:space-between;}
+  .ai-badge{
+    display:flex; align-items:center; gap:5px; font-size:9.5px; letter-spacing:.8px; text-transform:uppercase;
+    color:var(--ember-soft); font-weight:600;
+  }
+  .ai-badge .dot{width:5px; height:5px; border-radius:50%; background:var(--ember);}
+  .ai-reflect-btn{
+    border:1px solid rgba(232,162,92,0.4); background:rgba(232,162,92,0.08); color:var(--ember-soft);
+    font-family:var(--sans); font-size:10.5px; font-weight:600; padding:6px 12px; border-radius:10px; cursor:pointer;
+    transition:all .25s ease;
+  }
+  .ai-reflect-btn:active{transform:scale(.96);}
+  .ai-reflect-btn:disabled{opacity:.4; cursor:default;}
+  .ai-thinking{display:none; align-items:center; gap:4px; padding:2px 2px;}
+  .ai-thinking.on{display:flex;}
+  .ai-thinking span{width:4px; height:4px; border-radius:50%; background:var(--ember-soft); animation:aiDot 1.2s ease-in-out infinite;}
+  .ai-thinking span:nth-child(2){animation-delay:.15s;}
+  .ai-thinking span:nth-child(3){animation-delay:.3s;}
+  @keyframes aiDot{0%,60%,100%{opacity:.25; transform:translateY(0);} 30%{opacity:1; transform:translateY(-3px);}}
+  .ai-response{
+    border-left:2px solid var(--ember-soft); padding:2px 0 2px 12px;
+    font-family:'Fraunces', Georgia, serif; font-style:italic; font-size:13px; color:var(--ember-soft); line-height:1.6;
+  }
+  .ai-transcript{display:flex; flex-direction:column; gap:14px; margin-bottom: 4px;}
+  .ai-transcript:empty{margin-bottom:0;}
+  .transcript-entry{display:flex; flex-direction:column; gap:8px; animation:entryIn .4s ease;}
+  .transcript-entry .written{
+    font-size:13px; color:var(--ink-text); line-height:1.6; white-space:pre-wrap;
+    padding:12px 14px; border:1px solid var(--card-line); border-radius:14px; background:var(--card);
+  }
+  @keyframes entryIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---------- TODO ---------- */
+  .todo-body{flex:1; display:flex; flex-direction:column; padding:26px 24px 24px;}
+  .todo-eyebrow{font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--sage-soft); margin-bottom:10px;}
+  .todo-h{font-family:'Fraunces', Georgia, serif; font-size:19px; color:var(--ink-text); margin-bottom:18px;}
+  .todo-list{display:flex; flex-direction:column; gap:9px; margin-bottom:14px;}
+  .todo-item{
+    display:flex; align-items:center; gap:10px; border:1px solid var(--card-line); border-radius:12px; padding:11px 13px;
+    font-size:13px; color:var(--muted-text); background:var(--card);
+  }
+  .todo-item .bullet{width:14px; height:14px; border-radius:50%; border:1.5px solid var(--sage-soft); flex-shrink:0;}
+  .todo-item input{
+    flex:1; border:none; background:transparent; outline:none; font-size:13px; font-family:var(--sans);
+    color:var(--ink-text); padding:0; min-width:0;
+  }
+  .todo-item input::placeholder{color:var(--muted-text);}
+  .todo-item .todo-del{
+    flex-shrink:0; width:18px; height:18px; border-radius:50%; border:none; background:transparent;
+    color:var(--muted-text); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+  }
+  .todo-item .todo-del:hover{color:var(--ember-soft);}
+  .todo-add{
+    display:flex; align-items:center; gap:10px; border:1px dashed var(--card-line); border-radius:12px; padding:11px 13px;
+    font-size:13px; color:var(--muted-text); cursor:pointer; background:transparent;
+  }
+  .todo-add .plus{width:14px; height:14px; border-radius:50%; border:1.5px solid var(--muted-text); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px;}
+
+  /* ---------- CLOSING ---------- */
+  .closing-body{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:30px 30px 44px; text-align:center;}
+  .check{
+    width:52px; height:52px; border-radius:50%; background:var(--card); border:1px solid var(--card-line);
+    display:flex; align-items:center; justify-content:center; color:var(--ember-soft); font-size:20px;
+  }
+  .closing-body h2{font-family:'Fraunces', Georgia, serif; font-size:19px; color:var(--ink-text); font-weight:500;}
+  .closing-body p{font-size:12px; color:var(--muted-text); line-height:1.6; max-width:220px;}
+  .closing-btns{display:flex; flex-direction:column; gap:9px; width:100%; margin-top:6px;}
+
+  /* ---------- PREMIUM ---------- */
+  .premium-body{flex:1; overflow-y:auto; padding:16px 22px 24px; display:flex; flex-direction:column; gap:16px;}
+  .premium-body h2{font-family:'Fraunces', Georgia, serif; font-size:18px; color:var(--ink-text); text-align:center; font-weight:500;}
+  .tier-block{display:flex; flex-direction:column; gap:8px;}
+  .tier-label{font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600;}
+  .tier-label.free{color:var(--sage-soft);}
+  .tier-label.paid{color:var(--ember-soft);}
+  .feature-list{list-style:none; display:flex; flex-direction:column; gap:7px;}
+  .feature-list li{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted-text);}
+  .feature-list li .fi{width:15px; height:15px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:9px;}
+  .feature-list.free-list li .fi{background:rgba(111,160,143,0.18); color:var(--sage-soft);}
+  .feature-list.paid-list li .fi{background:rgba(232,162,92,0.18); color:var(--ember-soft);}
+  .period-toggle{display:flex; background:var(--card); border:1px solid var(--card-line); border-radius:12px; padding:3px; gap:2px; margin-top:2px;}
+  .period-toggle button{flex:1; border:none; background:transparent; padding:8px 4px; font-size:10px; font-family:var(--sans); font-weight:600; color:var(--muted-text); border-radius:9px; cursor:pointer; transition:all .3s ease;}
+  .period-toggle button.active{background:var(--ember); color:#241505;}
+  .price-display{text-align:center; font-family:'Fraunces', Georgia, serif; font-size:21px; color:var(--ink-text); margin-top:2px;}
+  .premium-actions{display:flex; flex-direction:column; gap:9px; margin-top:4px;}
+
+  /* ---------- AUTH ---------- */
+  .auth-body{flex:1; display:flex; flex-direction:column; padding:22px 24px 24px;}
+  .auth-body h2{font-family:'Fraunces', Georgia, serif; font-size:19px; color:var(--ink-text); margin-bottom:18px; text-align:center;}
+  .auth-tabs{display:flex; background:var(--card); border:1px solid var(--card-line); border-radius:12px; padding:3px; gap:2px; margin-bottom:20px;}
+  .auth-tabs button{flex:1; border:none; background:transparent; padding:9px 8px; font-size:11.5px; font-family:var(--sans); font-weight:600; color:var(--muted-text); border-radius:9px; cursor:pointer; transition:all .3s ease;}
+  .auth-tabs button.active{background:var(--twilight); color:var(--moonlight);}
+  .auth-field{margin-bottom:12px;}
+  .auth-field input{
+    width:100%; border:1px solid var(--card-line); border-radius:12px; padding:13px 14px; background:var(--card);
+    color:var(--ink-text); font-size:13px; font-family:var(--sans); outline:none; transition:border-color .3s ease;
+  }
+  .auth-field input::placeholder{color:var(--muted-text);}
+  .auth-field input:focus{border-color:var(--ember-soft);}
+  .auth-forgot{font-size:11.5px; color:var(--muted-text); text-align:right; margin-bottom:16px; cursor:pointer;}
+  .auth-error{font-size:11.5px; color:var(--ember); margin-bottom:12px; display:none;}
+  .auth-error.on{display:block;}
+  .auth-body .cta{margin-top:auto;}
+
+  /* ---------- CHECKOUT ---------- */
+  .checkout-body{flex:1; display:flex; flex-direction:column; padding:22px 24px 24px;}
+  .checkout-body h2{font-family:'Fraunces', Georgia, serif; font-size:19px; color:var(--ink-text); margin-bottom:18px; text-align:center;}
+  .checkout-card{border:1px solid var(--card-line); border-radius:14px; padding:16px; background:var(--card); margin-bottom:16px;}
+  .checkout-row{display:flex; justify-content:space-between; align-items:center; padding:8px 0; font-size:12.5px; color:var(--muted-text);}
+  .checkout-row:not(:last-child){border-bottom:1px solid var(--card-line);}
+  .checkout-row span:last-child{color:var(--ink-text); font-weight:600;}
+  .checkout-demo-note{font-size:11px; color:var(--ember-soft); text-align:center; margin-bottom:16px; line-height:1.5;}
+  .checkout-body .cta{margin-top:auto;}
+  .checkout-spinner{display:none; align-items:center; justify-content:center; gap:4px; padding:4px 0;}
+  .checkout-spinner.on{display:flex;}
+  .checkout-spinner span{width:5px; height:5px; border-radius:50%; background:#2A1706; animation:aiDot 1.2s ease-in-out infinite;}
+  .checkout-spinner span:nth-child(2){animation-delay:.15s;}
+  .checkout-spinner span:nth-child(3){animation-delay:.3s;}
+
+  /* ---------- PREMIUM SUCCESS ---------- */
+  .psuccess-body{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:30px 30px 44px; text-align:center;}
+  .psuccess-body h2{font-family:'Fraunces', Georgia, serif; font-size:19px; color:var(--ink-text); font-weight:500;}
+  .psuccess-card{width:100%; border:1px solid var(--card-line); border-radius:14px; padding:14px 16px; background:var(--card);}
+
+  /* ---------- MANAGE (inside premium scene) ---------- */
+  .pitch-view{display:flex; flex-direction:column; gap:16px;}
+  .pitch-view.hidden{display:none;}
+  .manage-view{display:none; flex-direction:column; gap:16px;}
+  .manage-view.on{display:flex;}
+  .manage-badge{display:flex; align-items:center; gap:8px; justify-content:center; color:var(--sage-soft); font-size:12.5px; font-weight:600;}
+  .manage-badge .dot{width:6px; height:6px; border-radius:50%; background:var(--sage-soft);}
+
+  /* ---------- HISTORY ---------- */
+  .history-month-nav{display:flex; align-items:center; gap:14px;}
+  .history-month-nav button{
+    width:24px; height:24px; border-radius:50%; border:1px solid var(--card-line); background:var(--card);
+    color:var(--muted-text); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center;
+  }
+  .history-month-nav span{font-size:12.5px; color:var(--ink-text); font-weight:600; min-width:120px; text-align:center;}
+  .history-body{flex:1; overflow-y:auto; padding:18px 24px 24px; display:flex; flex-direction:column; gap:8px;}
+  .history-item{
+    display:flex; flex-direction:column; gap:4px; border:1px solid var(--card-line); border-radius:14px;
+    padding:13px 15px; background:var(--card); cursor:pointer; text-align:left;
+  }
+  .history-item .h-date{font-size:11.5px; color:var(--ember-soft); font-weight:600; letter-spacing:.3px;}
+  .history-item .h-preview{font-size:13px; color:var(--muted-text); line-height:1.5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .history-empty{display:none; text-align:center; color:var(--muted-text); font-size:13px; margin-top:40px; line-height:1.6;}
+  .history-empty.on{display:block;}
+  .history-detail-body{flex:1; overflow-y:auto; padding:20px 24px 24px;}
+  .history-detail-body h2{font-family:'Fraunces', Georgia, serif; font-size:19px; color:var(--ink-text); margin-bottom:18px;}
+  .history-block{margin-bottom:20px;}
+  .history-block .h-q{font-family:'Fraunces', Georgia, serif; font-style:italic; font-size:13px; color:var(--ember-soft); margin-bottom:6px;}
+  .history-block .h-a{font-size:13.5px; color:var(--ink-text); line-height:1.6; white-space:pre-wrap;}
+  .history-todo-list{list-style:none; display:flex; flex-direction:column; gap:6px;}
+  .history-todo-list li{font-size:13px; color:var(--ink-text); padding-left:16px; position:relative;}
+  .history-todo-list li::before{content:"—"; position:absolute; left:0; color:var(--sage-soft);}
+
+
+  .caption{
+    margin-top:26px; text-align:center; font-size:12px; color:var(--muted-text); letter-spacing:.3px; position:relative; z-index:1;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important;}
+  }
+
+  /* ---------- RESPONSIVE: real mobile viewport becomes full-screen app ---------- */
+  @media (max-width:480px){
+    body{
+      padding:0; justify-content:flex-start;
+      height:100vh; height:100dvh;
+    }
+    .page-stars{display:none;}
+    .top-row{
+      margin:14px 0 8px; padding:0 16px; width:100%; justify-content:space-between; flex-wrap:nowrap;
+    }
+    .brand-mark span{font-size:16px; letter-spacing:3px;}
+    .lang-select{font-size:11px; padding:7px 10px;}
+    .phone{
+      width:100%; max-width:100%;
+      flex:1; height:auto;
+      background:var(--ink);
+      border-radius:0; padding:0; box-shadow:none;
+    }
+    .notch{display:none;}
+    .screen{border-radius:0; height:100%;}
+    .caption{display:none;}
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="page-stars" id="pageStars"></div>
+
+<div class="top-row">
+  <div class="brand-mark"><div class="ring"></div><span>examen</span></div>
+  <select class="lang-select" id="langSelect">
+    <option value="cs">Čeština</option>
+    <option value="en">English</option>
+    <option value="de">Deutsch</option>
+    <option value="it">Italiano</option>
+    <option value="es">Español</option>
+    <option value="zh">中文</option>
+    <option value="ar">العربية</option>
+  </select>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen" id="screen">
+
+    <!-- INTRO -->
+    <section class="scene active" id="intro">
+      <div class="intro-sky">
+        <div class="ember-glow"></div>
+        <div class="horizon-line"></div>
+        <div class="moon"></div>
+        <div class="intro-stars" id="introStars"></div>
+      </div>
+      <div class="intro-mark">
+        <div class="ring"></div>
+        <p>examen</p>
+        <div class="intro-claim" id="introClaim">večerní zpytování svědomí sv. Ignáce z Loyoly</div>
+      </div>
+      <div class="intro-tap" id="introTap">klepni pro vstup</div>
+    </section>
+
+    <!-- HOME -->
+    <section class="scene" id="home">
+      <div class="app-top">
+        <div class="icon-btn" data-go="premium">&#9881;</div>
+        <div class="toggle" data-toggle>
+          <button class="active" data-mode="general" id="toggleGeneralBtn">Obecná</button>
+          <button data-mode="spiritual" id="toggleSpiritualBtn">Duchovní</button>
+        </div>
+        <div class="icon-btn" id="historyBtn">&#128197;</div>
+      </div>
+      <div class="home-body">
+        <div class="home-date">
+          <p id="homeDay">pátek</p>
+          <h1 id="homeDate">13. července</h1>
+        </div>
+        <div class="breathe">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="ring r3"></div>
+        </div>
+        <button class="cta" data-go="reflect" data-reset="1" id="ctaBtn">Začít večerní reflexi</button>
+      </div>
+    </section>
+
+    <!-- REFLECT -->
+    <section class="scene" id="reflect">
+      <div class="app-top">
+        <div class="icon-btn back-icon" data-go="home">&#8592;</div>
+        <div class="dots" id="stepDots"></div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="reflect-body">
+        <div class="step-eyebrow" id="stepLabel">Krok 1 z 5</div>
+        <div class="step-q" id="stepQ">Zastav se. Nadechni se třikrát. Jsi tady.</div>
+        <div class="step-q-spirit" id="stepQSpirit">Popros o světlo, abys viděl/a svůj den jasně.</div>
+
+        <div class="ai-transcript" id="aiTranscript"></div>
+
+        <textarea class="step-input" id="stepInput" placeholder="Piš, co tě napadne..."></textarea>
+
+        <div class="ai-mirror">
+          <div class="ai-mirror-head">
+            <div class="ai-badge"><span class="dot"></span><span id="aiBadgeLabel">AI tiché zrcadlo</span></div>
+            <button class="ai-reflect-btn" id="aiReflectBtn">Reflektovat</button>
+          </div>
+          <div class="ai-thinking" id="aiThinking"><span></span><span></span><span></span></div>
+        </div>
+
+        <div style="flex:1;"></div>
+        <button class="cta" style="margin-top:16px;" id="stepNext">Pokračovat</button>
+      </div>
+    </section>
+
+    <!-- TODO -->
+    <section class="scene" id="todo">
+      <div class="app-top">
+        <div class="icon-btn back-icon" data-go="reflect">&#8592;</div>
+        <div class="todo-eyebrow" style="margin:0;" id="todoStepLabel">Krok 6</div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="todo-body">
+        <div class="todo-eyebrow" id="todoEyebrow">Odděleně od reflexe</div>
+        <div class="todo-h" id="todoHeading">Co potřebuješ zítra udělat?</div>
+        <div class="todo-list" id="todoList">
+          <div class="todo-item" data-default="1"><span class="bullet"></span><input type="text" id="todoItem1" value="Zavolat mamce"><button class="todo-del" aria-label="Smazat">&#10005;</button></div>
+          <div class="todo-item" data-default="1"><span class="bullet"></span><input type="text" id="todoItem2" value="Dokončit prezentaci"><button class="todo-del" aria-label="Smazat">&#10005;</button></div>
+        </div>
+        <div class="todo-add" id="todoAdd"><span class="plus">+</span><span id="todoAddLabel">Přidat úkol</span></div>
+        <div style="flex:1;"></div>
+        <button class="cta" data-go="closing" id="todoFinishBtn">Dokončit</button>
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section class="scene" id="closing">
+      <div class="app-top">
+        <div style="width:30px;"></div>
+        <div style="width:30px;"></div>
+        <div class="icon-btn" data-go="home">&#10005;</div>
+      </div>
+      <div class="closing-body">
+        <div class="check">&#10003;</div>
+        <h2 id="closingHeading">Reflexe dokončena</h2>
+        <p id="closingNote">Bez uložení se reflexe po zavření vymaže.</p>
+        <p class="auth-error" id="saveError" style="text-align:center;">Uložení se nepovedlo, zkus to prosím znovu.</p>
+        <div class="closing-btns">
+          <button class="cta" id="saveBtn">Uložit</button>
+          <button class="cta cta-ghost" data-go="home" id="deleteBtn">Smazat</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PREMIUM -->
+    <section class="scene" id="premium">
+      <div class="app-top">
+        <div class="icon-btn back-icon" data-go="home">&#8592;</div>
+        <div style="width:30px;"></div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="premium-body">
+        <h2 id="premiumTitle">Rozšiř svou praxi</h2>
+
+        <div class="pitch-view" id="pitchView">
+          <div class="tier-block">
+            <div class="tier-label free" id="premiumFreeLabel">Zdarma navždy</div>
+            <ul class="feature-list free-list" id="freeFeatureList"></ul>
+          </div>
+
+          <div class="tier-block">
+            <div class="tier-label paid" id="premiumPaidLabel">Rozšířená vrstva</div>
+            <ul class="feature-list paid-list" id="paidFeatureList"></ul>
+          </div>
+
+          <div class="period-toggle" id="periodToggle">
+            <button class="active" data-period="monthly" id="periodMonthlyBtn">Měsíčně</button>
+            <button data-period="yearly" id="periodYearlyBtn">Ročně</button>
+            <button data-period="once" id="periodOnceBtn">Jednorázově</button>
+          </div>
+
+          <div class="price-display" id="priceDisplay">99 Kč / měsíc</div>
+
+          <div class="premium-actions">
+            <button class="cta" id="choosePlanBtn">Pokračovat</button>
+            <button class="cta cta-ghost" data-go="home" id="continueFreeBtn">Pokračovat zdarma</button>
+          </div>
+        </div>
+
+        <div class="manage-view" id="manageView">
+          <div class="manage-badge"><span class="dot"></span><span id="manageActiveLabel">Premium aktivní</span></div>
+          <div class="checkout-card">
+            <div class="checkout-row"><span id="managePlanLabel">Plán</span><span id="managePlanValue">—</span></div>
+            <div class="checkout-row"><span id="managePriceLabel">Cena</span><span id="managePriceValue">—</span></div>
+            <div class="checkout-row"><span id="manageNextLabel">Příští platba</span><span id="manageNextValue">—</span></div>
+          </div>
+          <div class="premium-actions">
+            <button class="cta cta-ghost" data-go="home" id="manageBackBtn">Zpět do appky</button>
+            <button class="cta cta-ghost" id="manageCancelBtn" style="border-color:rgba(232,162,92,0.35); color:var(--ember-soft);">Zrušit předplatné</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section class="scene" id="account">
+      <div class="app-top">
+        <div class="icon-btn back-icon" data-go="premium">&#8592;</div>
+        <div style="width:30px;"></div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="auth-body">
+        <h2 id="authHeading">Vytvoř si účet</h2>
+        <div class="auth-tabs">
+          <button class="active" data-auth="login" id="authLoginBtn">Přihlásit se</button>
+          <button data-auth="signup" id="authSignupBtn">Vytvořit účet</button>
+        </div>
+        <div class="auth-field"><input type="email" id="authEmail" placeholder="tvůj@email.cz"></div>
+        <div class="auth-field"><input type="password" id="authPassword" placeholder="Heslo"></div>
+        <div class="auth-forgot" id="authForgot">Zapomenuté heslo?</div>
+        <div class="auth-error" id="authError">Vyplň e-mail i heslo</div>
+        <button class="cta" id="authContinueBtn">Pokračovat</button>
+      </div>
+    </section>
+
+    <!-- CHECKOUT -->
+    <section class="scene" id="checkout">
+      <div class="app-top">
+        <div class="icon-btn back-icon" data-go="account">&#8592;</div>
+        <div style="width:30px;"></div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="checkout-body">
+        <h2 id="checkoutTitle">Shrnutí objednávky</h2>
+        <div class="checkout-card">
+          <div class="checkout-row"><span id="checkoutPlanLabel">Plán</span><span id="checkoutPlanValue">—</span></div>
+          <div class="checkout-row"><span id="checkoutPriceLabel">Cena</span><span id="checkoutPriceValue">—</span></div>
+          <div class="checkout-row"><span id="checkoutRenewLabel">Obnovení</span><span id="checkoutRenewValue">—</span></div>
+        </div>
+        <div class="checkout-demo-note" id="checkoutDemoNote">Ukázkový režim — bez napojení na platební bránu</div>
+        <p class="auth-error" id="checkoutError" style="text-align:center;"></p>
+        <button class="cta" id="checkoutConfirmBtn">
+          <span id="checkoutConfirmLabel">Potvrdit a aktivovat</span>
+          <span class="checkout-spinner" id="checkoutSpinner"><span></span><span></span><span></span></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PREMIUM SUCCESS -->
+    <section class="scene" id="premiumSuccess">
+      <div class="app-top">
+        <div style="width:30px;"></div>
+        <div style="width:30px;"></div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="psuccess-body">
+        <div class="check">&#10003;</div>
+        <h2 id="successHeading">Premium aktivováno</h2>
+        <div class="psuccess-card">
+          <div class="checkout-row"><span id="successPlanLabel">Plán</span><span id="successPlanValue">—</span></div>
+          <div class="checkout-row"><span id="successNextLabel">Příští platba</span><span id="successNextValue">—</span></div>
+        </div>
+        <button class="cta" data-go="home" id="successContinueBtn" style="width:100%;">Pokračovat do appky</button>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="scene" id="history">
+      <div class="app-top">
+        <div class="icon-btn back-icon" data-go="home">&#8592;</div>
+        <div class="history-month-nav">
+          <button id="historyPrevBtn">&#8249;</button>
+          <span id="historyMonthLabel">—</span>
+          <button id="historyNextBtn">&#8250;</button>
+        </div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="history-body">
+        <div id="historyList"></div>
+        <p class="history-empty" id="historyEmpty">Zatím zde nemáš žádné uložené reflexe.</p>
+      </div>
+    </section>
+
+    <!-- HISTORY DETAIL -->
+    <section class="scene" id="historyDetail">
+      <div class="app-top">
+        <div class="icon-btn back-icon" data-go="history">&#8592;</div>
+        <div style="width:30px;"></div>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="history-detail-body">
+        <h2 id="historyDetailDate">—</h2>
+        <div id="historyDetailContent"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="caption" id="caption">koncept vizuální identity a interakce</div>
+
+<script>
+  const SUPABASE_URL = 'https://czjosdjijmloxnahflbs.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6am9zZGppam1sb3huYWhmbGJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMDM1NTIsImV4cCI6MjA5OTU3OTU1Mn0.UsZsw4M8nAqHqem0Sy25v5t5xQpzqPIJ3wRjYqVPo24';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentAnswers = {};
+  let lastAiResponse = null;
+  const localeMap = { cs:'cs-CZ', en:'en-US', de:'de-DE', it:'it-IT', es:'es-ES', zh:'zh-CN', ar:'ar-SA' };
+  let currentTodos = [];
+  const dict = {
+    cs:{ introTap:"klepni pro vstup", claim:"večerní zpytování svědomí sv. Ignáce z Loyoly", day:"pátek", date:"13. července",
+      toggleGeneral:"Obecná", toggleSpiritual:"Duchovní", cta:"Začít večerní reflexi",
+      stepLabel:n=>`Krok ${n} z 5`,
+      steps:[
+        {q:"Zastav se. Nadechni se třikrát. Jsi tady.", s:"Popros o světlo, abys viděl/a svůj den jasně."},
+        {q:"Co se dnes stalo? Za co jsi vděčný/á?", s:"Kde jsi cítil/a Boží blízkost? Za co děkuješ?"},
+        {q:"Co tě dnes tížilo? Jaké emoce sis nesl/a?", s:"Přines tyto pocity do ticha."},
+        {q:"Vyber jednu věc z dneška a chvíli u ní zůstaň.", s:"Prostor napsat krátkou modlitbu k ní."},
+        {q:"Co si chceš odnést do zítřka? Co chceš pustit?", s:"Svěř zítřek do rukou, kterým důvěřuješ."}
+      ],
+      inputPlaceholder:"Piš, co tě napadne...", continueBtn:"Pokračovat",
+      todoStepLabel:"Krok 6", todoEyebrow:"Odděleně od reflexe", todoHeading:"Co potřebuješ zítra udělat?",
+      todoItem1:"Zavolat mamce", todoItem2:"Dokončit prezentaci", todoAdd:"Přidat úkol", todoNewItem:"Nový úkol", todoFinish:"Dokončit",
+      closingHeading:"Reflexe dokončena", closingNote:"Bez uložení se reflexe po zavření vymaže.",
+      historyEmpty:"Zatím zde nemáš žádné uložené reflexe.",
+      premiumTitle:"Rozšiř svou praxi", premiumFreeLabel:"Zdarma navždy", premiumPaidLabel:"Rozšířená vrstva",
+      freeFeatures:["Pět kroků večerní reflexe","Úkoly na zítřek","Obecná i duchovní vrstva","Uložení na zařízení"],
+      paidFeatures:["AI tiché zrcadlo","Týdenní ohlédnutí","Knihovna modliteb","Synchronizace zařízení"],
+      periodMonthly:"Měsíčně", periodYearly:"Ročně", periodOnce:"Jednorázově",
+      prices:{monthly:"99 Kč / měsíc", yearly:"790 Kč / rok", once:"1 490 Kč napořád"},
+      priceCents:{monthly:9900, yearly:79000, once:149000}, currency:"CZK",
+      choosePlan:"Pokračovat", continueFree:"Pokračovat zdarma",
+      aiReflect:"Reflektovat",
+      aiMirror:{
+        short:[
+          "Napsal/a jsi jen pár slov. Chceš u toho zůstat déle, nebo je to pro dnešek dost?",
+          "Jen pár slov, ale možná stačí. Chceš přidat něco dalšího?",
+          "Krátké, výstižné. Je v tom všechno, co jsi chtěl/a říct?"
+        ],
+        medium:[
+          "Zdá se, že ses u toho pozastavil/a. Co z toho, co jsi napsal/a, je nejdůležitější?",
+          "Popsal/a jsi to docela podrobně. Která část v tobě zůstává nejsilnější?",
+          "Je v tom vidět, že sis to promyslel/a. Chceš u něčeho z toho zůstat déle?"
+        ],
+        long:[
+          "Napsal/a jsi toho dost. Je tam něco, u čeho bys chtěl/a zůstat ještě chvíli?",
+          "Popsal/a jsi toho hodně. Co z toho cítíš nejvíc?",
+          "Je toho hodně najednou. Nemusíš to řešit celé — stačí to, co je teď nejdůležitější."
+        ],
+        fallback:"Zůstaň u toho, co jsi napsal/a, ještě chvíli. Nic dalšího přidávat nemusíš."
+      },
+      authHeading:"Vytvoř si účet", authLoginTab:"Přihlásit se", authSignupTab:"Vytvořit účet",
+      emailPlaceholder:"tvůj@email.cz", passwordPlaceholder:"Heslo", authForgot:"Zapomenuté heslo?",
+      authContinue:"Pokračovat", authError:"Vyplň e-mail i heslo",
+      authConfirmPending:"Zkontroluj e-mail a potvrď registraci, pak se přihlas.",
+      checkoutTitle:"Shrnutí objednávky", checkoutPlanLabel:"Plán", checkoutPriceLabel:"Cena", checkoutRenewLabel:"Obnovení",
+      checkoutRenewAuto:"Automaticky se obnoví", checkoutRenewOnce:"Jednorázová platba, bez opakování",
+      checkoutDemoNote:"Ukázkový režim — bez napojení na platební bránu", checkoutConfirm:"Potvrdit a aktivovat",
+      successHeading:"Premium aktivováno", successPlanLabel:"Plán", successNextLabel:"Příští platba", successNoRenewal:"Bez opakování", successContinue:"Pokračovat do appky",
+      manageActiveLabel:"Premium aktivní", managePlanLabel:"Plán", managePriceLabel:"Cena", manageNextLabel:"Příští platba",
+      manageBackBtn:"Zpět do appky", manageCancelBtn:"Zrušit předplatné", manageCancelled:"Předplatné zrušeno",
+      saveBtn:"Uložit", deleteBtn:"Smazat", caption:"koncept vizuální identity a interakce", dir:"ltr", fontSerif:"'Fraunces', Georgia, serif", fontSans:"'Manrope', -apple-system, sans-serif" },
+
+    en:{ introTap:"tap to enter", claim:"the evening examen of st. ignatius of loyola", day:"friday", date:"july 13",
+      toggleGeneral:"General", toggleSpiritual:"Spiritual", cta:"Begin evening reflection",
+      stepLabel:n=>`Step ${n} of 5`,
+      steps:[
+        {q:"Pause. Take three slow breaths. You are here.", s:"Ask for light, to see your day clearly."},
+        {q:"What happened today? What are you grateful for?", s:"Where did you feel God's closeness? What are you thankful for?"},
+        {q:"What weighed on you today? What did you carry?", s:"Bring these feelings into the silence."},
+        {q:"Choose one moment from today and stay with it.", s:"Space to write a short prayer about it."},
+        {q:"What do you want to carry into tomorrow? What do you want to let go of?", s:"Entrust tomorrow to hands you trust."}
+      ],
+      inputPlaceholder:"Write whatever comes to mind...", continueBtn:"Continue",
+      todoStepLabel:"Step 6", todoEyebrow:"Separate from reflection", todoHeading:"What do you need to do tomorrow?",
+      todoItem1:"Call mom", todoItem2:"Finish the presentation", todoAdd:"Add task", todoNewItem:"New task", todoFinish:"Finish",
+      closingHeading:"Reflection complete", closingNote:"Without saving, this reflection is deleted when closed.",
+      historyEmpty:"You don't have any saved reflections yet.",
+      premiumTitle:"Expand your practice", premiumFreeLabel:"Free forever", premiumPaidLabel:"Extended layer",
+      freeFeatures:["Five steps of evening reflection","Tomorrow's tasks","General and spiritual layer","Saved on your device"],
+      paidFeatures:["AI silent mirror","Weekly review","Prayer library","Sync across devices"],
+      periodMonthly:"Monthly", periodYearly:"Yearly", periodOnce:"One-time",
+      prices:{monthly:"€4 / month", yearly:"€32 / year", once:"€60 forever"},
+      priceCents:{monthly:400, yearly:3200, once:6000}, currency:"EUR",
+      choosePlan:"Continue", continueFree:"Continue for free",
+      aiReflect:"Reflect",
+      aiMirror:{
+        short:[
+          "You wrote just a few words. Do you want to stay with this a little longer, or is that enough for today?",
+          "Just a few words, but maybe that's enough. Is there anything you'd like to add?",
+          "Short and to the point. Does it hold everything you wanted to say?"
+        ],
+        medium:[
+          "It seems you paused on this. What feels most important in what you wrote?",
+          "You described this in some detail. Which part feels strongest to you?",
+          "It shows you thought this through. Is there a part you'd like to stay with longer?"
+        ],
+        long:[
+          "You wrote quite a lot. Is there a part you'd like to stay with a little longer?",
+          "You described a lot here. What stands out to you the most?",
+          "That's a lot at once. You don't have to work through all of it — just what matters most right now."
+        ],
+        fallback:"Stay with what you wrote a little longer. You don't need to add anything else."
+      },
+      authHeading:"Create your account", authLoginTab:"Log in", authSignupTab:"Create account",
+      emailPlaceholder:"your@email.com", passwordPlaceholder:"Password", authForgot:"Forgot password?",
+      authContinue:"Continue", authError:"Please fill in email and password",
+      authConfirmPending:"Check your email to confirm your account, then log in.",
+      checkoutTitle:"Order summary", checkoutPlanLabel:"Plan", checkoutPriceLabel:"Price", checkoutRenewLabel:"Renewal",
+      checkoutRenewAuto:"Renews automatically", checkoutRenewOnce:"One-time payment, no renewal",
+      checkoutDemoNote:"Demo mode — no payment gateway connected", checkoutConfirm:"Confirm and activate",
+      successHeading:"Premium activated", successPlanLabel:"Plan", successNextLabel:"Next payment", successNoRenewal:"No renewal", successContinue:"Continue to the app",
+      manageActiveLabel:"Premium active", managePlanLabel:"Plan", managePriceLabel:"Price", manageNextLabel:"Next payment",
+      manageBackBtn:"Back to the app", manageCancelBtn:"Cancel subscription", manageCancelled:"Subscription cancelled",
+      saveBtn:"Save", deleteBtn:"Delete", caption:"concept of visual identity and interaction", dir:"ltr", fontSerif:"'Fraunces', Georgia, serif", fontSans:"'Manrope', -apple-system, sans-serif" },
+
+    de:{ introTap:"berühren zum eintreten", claim:"die abendliche gewissenserforschung des hl. ignatius von loyola", day:"freitag", date:"13. juli",
+      toggleGeneral:"Allgemein", toggleSpiritual:"Geistlich", cta:"Abendliche Besinnung beginnen",
+      stepLabel:n=>`Schritt ${n} von 5`,
+      steps:[
+        {q:"Halte inne. Atme dreimal tief durch. Du bist hier.", s:"Bitte um Licht, um deinen Tag klar zu sehen."},
+        {q:"Was ist heute geschehen? Wofür bist du dankbar?", s:"Wo hast du Gottes Nähe gespürt? Wofür dankst du?"},
+        {q:"Was hat dich heute belastet? Welche Gefühle trägst du?", s:"Bring diese Gefühle in die Stille."},
+        {q:"Wähle einen Moment des Tages und verweile dabei.", s:"Raum, um ein kurzes Gebet dazu zu schreiben."},
+        {q:"Was möchtest du in den morgigen Tag mitnehmen? Was möchtest du loslassen?", s:"Vertraue den morgigen Tag Händen an, denen du traust."}
+      ],
+      inputPlaceholder:"Schreibe, was dir in den Sinn kommt...", continueBtn:"Weiter",
+      todoStepLabel:"Schritt 6", todoEyebrow:"Getrennt von der Besinnung", todoHeading:"Was musst du morgen erledigen?",
+      todoItem1:"Mama anrufen", todoItem2:"Präsentation fertigstellen", todoAdd:"Aufgabe hinzufügen", todoNewItem:"Neue Aufgabe", todoFinish:"Fertig",
+      closingHeading:"Besinnung abgeschlossen", closingNote:"Ohne Speichern wird diese Besinnung beim Schließen gelöscht.",
+      historyEmpty:"Du hast noch keine gespeicherten Besinnungen.",
+      premiumTitle:"Erweitere deine Praxis", premiumFreeLabel:"Für immer kostenlos", premiumPaidLabel:"Erweiterte Ebene",
+      freeFeatures:["Fünf Schritte der Abendbesinnung","Aufgaben für morgen","Allgemeine und geistliche Ebene","Speicherung auf dem Gerät"],
+      paidFeatures:["Stiller KI-Spiegel","Wöchentlicher Rückblick","Gebetsbibliothek","Geräteübergreifende Synchronisierung"],
+      periodMonthly:"Monatlich", periodYearly:"Jährlich", periodOnce:"Einmalig",
+      prices:{monthly:"4 € / Monat", yearly:"32 € / Jahr", once:"60 € einmalig"},
+      priceCents:{monthly:400, yearly:3200, once:6000}, currency:"EUR",
+      choosePlan:"Weiter", continueFree:"Kostenlos fortfahren",
+      aiReflect:"Reflektieren",
+      aiMirror:{
+        short:[
+          "Du hast nur wenige Worte geschrieben. Möchtest du noch etwas länger dabei bleiben, oder reicht das für heute?",
+          "Nur wenige Worte, aber vielleicht reicht das. Möchtest du noch etwas hinzufügen?",
+          "Kurz und knapp. Steckt darin alles, was du sagen wolltest?"
+        ],
+        medium:[
+          "Es scheint, du bist hier verweilt. Was daran fühlt sich am wichtigsten an?",
+          "Du hast das recht ausführlich beschrieben. Welcher Teil bleibt für dich am stärksten?",
+          "Man merkt, dass du darüber nachgedacht hast. Möchtest du bei einem Teil noch länger bleiben?"
+        ],
+        long:[
+          "Du hast recht viel geschrieben. Gibt es einen Teil, bei dem du noch etwas länger bleiben möchtest?",
+          "Du hast hier viel beschrieben. Was davon spürst du am meisten?",
+          "Das ist viel auf einmal. Du musst nicht alles bearbeiten — nur das, was jetzt am wichtigsten ist."
+        ],
+        fallback:"Bleib noch etwas bei dem, was du geschrieben hast. Du musst nichts hinzufügen."
+      },
+      authHeading:"Erstelle dein Konto", authLoginTab:"Anmelden", authSignupTab:"Konto erstellen",
+      emailPlaceholder:"deine@email.de", passwordPlaceholder:"Passwort", authForgot:"Passwort vergessen?",
+      authContinue:"Weiter", authError:"Bitte E-Mail und Passwort ausfüllen",
+      authConfirmPending:"Bestätige dein Konto per E-Mail und melde dich dann an.",
+      checkoutTitle:"Bestellübersicht", checkoutPlanLabel:"Plan", checkoutPriceLabel:"Preis", checkoutRenewLabel:"Verlängerung",
+      checkoutRenewAuto:"Verlängert sich automatisch", checkoutRenewOnce:"Einmalige Zahlung, keine Verlängerung",
+      checkoutDemoNote:"Demomodus — keine Zahlungsanbindung", checkoutConfirm:"Bestätigen und aktivieren",
+      successHeading:"Premium aktiviert", successPlanLabel:"Plan", successNextLabel:"Nächste Zahlung", successNoRenewal:"Keine Verlängerung", successContinue:"Weiter zur App",
+      manageActiveLabel:"Premium aktiv", managePlanLabel:"Plan", managePriceLabel:"Preis", manageNextLabel:"Nächste Zahlung",
+      manageBackBtn:"Zurück zur App", manageCancelBtn:"Abo kündigen", manageCancelled:"Abo gekündigt",
+      saveBtn:"Speichern", deleteBtn:"Löschen", caption:"Konzept für visuelle Identität und Interaktion", dir:"ltr", fontSerif:"'Fraunces', Georgia, serif", fontSans:"'Manrope', -apple-system, sans-serif" },
+
+    it:{ introTap:"tocca per entrare", claim:"l'esame di coscienza serale di sant'ignazio di loyola", day:"venerdì", date:"13 luglio",
+      toggleGeneral:"Generale", toggleSpiritual:"Spirituale", cta:"Inizia la riflessione serale",
+      stepLabel:n=>`Passo ${n} di 5`,
+      steps:[
+        {q:"Fermati. Respira profondamente tre volte. Sei qui.", s:"Chiedi la luce, per vedere chiaramente la tua giornata."},
+        {q:"Cos'è successo oggi? Per cosa sei grato/a?", s:"Dove hai sentito la vicinanza di Dio? Per cosa ringrazi?"},
+        {q:"Cosa ti ha pesato oggi? Quali emozioni hai portato con te?", s:"Porta questi sentimenti nel silenzio."},
+        {q:"Scegli un momento della giornata e restaci un po'.", s:"Spazio per scrivere una breve preghiera su di esso."},
+        {q:"Cosa vuoi portare con te nel domani? Cosa vuoi lasciar andare?", s:"Affida il domani a mani di cui ti fidi."}
+      ],
+      inputPlaceholder:"Scrivi ciò che ti viene in mente...", continueBtn:"Continua",
+      todoStepLabel:"Passo 6", todoEyebrow:"Separato dalla riflessione", todoHeading:"Cosa devi fare domani?",
+      todoItem1:"Chiamare la mamma", todoItem2:"Finire la presentazione", todoAdd:"Aggiungi attività", todoNewItem:"Nuova attività", todoFinish:"Fine",
+      closingHeading:"Riflessione completata", closingNote:"Senza salvare, questa riflessione viene eliminata alla chiusura.",
+      historyEmpty:"Non hai ancora riflessioni salvate.",
+      premiumTitle:"Amplia la tua pratica", premiumFreeLabel:"Gratis per sempre", premiumPaidLabel:"Livello esteso",
+      freeFeatures:["Cinque passi della riflessione serale","Attività per domani","Livello generale e spirituale","Salvataggio sul dispositivo"],
+      paidFeatures:["Specchio silenzioso IA","Revisione settimanale","Libreria di preghiere","Sincronizzazione tra dispositivi"],
+      periodMonthly:"Mensile", periodYearly:"Annuale", periodOnce:"Una tantum",
+      prices:{monthly:"4 € / mese", yearly:"32 € / anno", once:"60 € una tantum"},
+      priceCents:{monthly:400, yearly:3200, once:6000}, currency:"EUR",
+      choosePlan:"Continua", continueFree:"Continua gratis",
+      aiReflect:"Rifletti",
+      aiMirror:{
+        short:[
+          "Hai scritto solo poche parole. Vuoi restare ancora un po' con questo, o basta per oggi?",
+          "Poche parole, ma forse bastano. Vuoi aggiungere altro?",
+          "Breve e diretto. C'è dentro tutto quello che volevi dire?"
+        ],
+        medium:[
+          "Sembra che ti sia soffermato/a qui. Cosa ti sembra più importante in ciò che hai scritto?",
+          "Lo hai descritto piuttosto nel dettaglio. Quale parte senti più forte?",
+          "Si vede che ci hai riflettuto. Vuoi restare ancora un po' su una parte di questo?"
+        ],
+        long:[
+          "Hai scritto parecchio. C'è una parte con cui vorresti restare ancora un po'?",
+          "Hai descritto molto qui. Cosa senti di più tra tutto questo?",
+          "È molto tutto insieme. Non devi elaborarlo tutto — solo ciò che conta di più adesso."
+        ],
+        fallback:"Resta ancora un po' con ciò che hai scritto. Non serve aggiungere altro."
+      },
+      authHeading:"Crea il tuo account", authLoginTab:"Accedi", authSignupTab:"Crea account",
+      emailPlaceholder:"tua@email.it", passwordPlaceholder:"Password", authForgot:"Password dimenticata?",
+      authContinue:"Continua", authError:"Inserisci email e password",
+      authConfirmPending:"Controlla la tua email per confermare, poi accedi.",
+      checkoutTitle:"Riepilogo ordine", checkoutPlanLabel:"Piano", checkoutPriceLabel:"Prezzo", checkoutRenewLabel:"Rinnovo",
+      checkoutRenewAuto:"Si rinnova automaticamente", checkoutRenewOnce:"Pagamento unico, senza rinnovo",
+      checkoutDemoNote:"Modalità demo — nessun gateway di pagamento collegato", checkoutConfirm:"Conferma e attiva",
+      successHeading:"Premium attivato", successPlanLabel:"Piano", successNextLabel:"Prossimo pagamento", successNoRenewal:"Nessun rinnovo", successContinue:"Continua nell'app",
+      manageActiveLabel:"Premium attivo", managePlanLabel:"Piano", managePriceLabel:"Prezzo", manageNextLabel:"Prossimo pagamento",
+      manageBackBtn:"Torna all'app", manageCancelBtn:"Annulla abbonamento", manageCancelled:"Abbonamento annullato",
+      saveBtn:"Salva", deleteBtn:"Elimina", caption:"concetto di identità visiva e interazione", dir:"ltr", fontSerif:"'Fraunces', Georgia, serif", fontSans:"'Manrope', -apple-system, sans-serif" },
+
+    es:{ introTap:"toca para entrar", claim:"el examen de conciencia vespertino de san ignacio de loyola", day:"viernes", date:"13 de julio",
+      toggleGeneral:"General", toggleSpiritual:"Espiritual", cta:"Comenzar la reflexión de la noche",
+      stepLabel:n=>`Paso ${n} de 5`,
+      steps:[
+        {q:"Detente. Respira profundamente tres veces. Estás aquí.", s:"Pide luz para ver tu día con claridad."},
+        {q:"¿Qué pasó hoy? ¿Por qué estás agradecido/a?", s:"¿Dónde sentiste la cercanía de Dios? ¿Por qué das gracias?"},
+        {q:"¿Qué te pesó hoy? ¿Qué emociones llevaste contigo?", s:"Trae estos sentimientos al silencio."},
+        {q:"Elige un momento del día y quédate un rato con él.", s:"Espacio para escribir una breve oración sobre ello."},
+        {q:"¿Qué quieres llevar contigo hacia mañana? ¿Qué quieres soltar?", s:"Confía el mañana a manos en las que confías."}
+      ],
+      inputPlaceholder:"Escribe lo que se te ocurra...", continueBtn:"Continuar",
+      todoStepLabel:"Paso 6", todoEyebrow:"Separado de la reflexión", todoHeading:"¿Qué necesitas hacer mañana?",
+      todoItem1:"Llamar a mamá", todoItem2:"Terminar la presentación", todoAdd:"Añadir tarea", todoNewItem:"Nueva tarea", todoFinish:"Terminar",
+      closingHeading:"Reflexión completada", closingNote:"Sin guardar, esta reflexión se elimina al cerrar.",
+      historyEmpty:"Todavía no tienes reflexiones guardadas.",
+      premiumTitle:"Amplía tu práctica", premiumFreeLabel:"Gratis para siempre", premiumPaidLabel:"Capa ampliada",
+      freeFeatures:["Cinco pasos de la reflexión nocturna","Tareas para mañana","Capa general y espiritual","Guardado en el dispositivo"],
+      paidFeatures:["Espejo silencioso de IA","Revisión semanal","Biblioteca de oraciones","Sincronización entre dispositivos"],
+      periodMonthly:"Mensual", periodYearly:"Anual", periodOnce:"Pago único",
+      prices:{monthly:"4 € / mes", yearly:"32 € / año", once:"60 € pago único"},
+      priceCents:{monthly:400, yearly:3200, once:6000}, currency:"EUR",
+      choosePlan:"Continuar", continueFree:"Continuar gratis",
+      aiReflect:"Reflejar",
+      aiMirror:{
+        short:[
+          "Escribiste solo unas pocas palabras. ¿Quieres quedarte con esto un poco más, o es suficiente por hoy?",
+          "Pocas palabras, pero quizás sea suficiente. ¿Quieres añadir algo más?",
+          "Breve y directo. ¿Está ahí todo lo que querías decir?"
+        ],
+        medium:[
+          "Parece que te detuviste aquí. ¿Qué te parece más importante de lo que escribiste?",
+          "Lo describiste con bastante detalle. ¿Qué parte sientes más fuerte?",
+          "Se nota que lo pensaste. ¿Quieres quedarte más tiempo con alguna parte de esto?"
+        ],
+        long:[
+          "Escribiste bastante. ¿Hay una parte con la que te gustaría quedarte un poco más?",
+          "Describiste mucho aquí. ¿Qué es lo que más sientes de todo esto?",
+          "Es mucho de una vez. No tienes que trabajarlo todo — solo lo que importa más ahora."
+        ],
+        fallback:"Quédate un poco más con lo que escribiste. No necesitas añadir nada más."
+      },
+      authHeading:"Crea tu cuenta", authLoginTab:"Iniciar sesión", authSignupTab:"Crear cuenta",
+      emailPlaceholder:"tu@email.es", passwordPlaceholder:"Contraseña", authForgot:"¿Olvidaste tu contraseña?",
+      authContinue:"Continuar", authError:"Completa el correo y la contraseña",
+      authConfirmPending:"Revisa tu correo para confirmar la cuenta y luego inicia sesión.",
+      checkoutTitle:"Resumen del pedido", checkoutPlanLabel:"Plan", checkoutPriceLabel:"Precio", checkoutRenewLabel:"Renovación",
+      checkoutRenewAuto:"Se renueva automáticamente", checkoutRenewOnce:"Pago único, sin renovación",
+      checkoutDemoNote:"Modo demo — sin pasarela de pago conectada", checkoutConfirm:"Confirmar y activar",
+      successHeading:"Premium activado", successPlanLabel:"Plan", successNextLabel:"Próximo pago", successNoRenewal:"Sin renovación", successContinue:"Continuar a la app",
+      manageActiveLabel:"Premium activo", managePlanLabel:"Plan", managePriceLabel:"Precio", manageNextLabel:"Próximo pago",
+      manageBackBtn:"Volver a la app", manageCancelBtn:"Cancelar suscripción", manageCancelled:"Suscripción cancelada",
+      saveBtn:"Guardar", deleteBtn:"Eliminar", caption:"concepto de identidad visual e interacción", dir:"ltr", fontSerif:"'Fraunces', Georgia, serif", fontSans:"'Manrope', -apple-system, sans-serif" },
+
+    zh:{ introTap:"点击进入", claim:"圣依纳爵·罗耀拉的晚间省察祈祷", day:"星期五", date:"7月13日",
+      toggleGeneral:"一般", toggleSpiritual:"灵性", cta:"开始晚间反思",
+      stepLabel:n=>`第 ${n} 步，共 5 步`,
+      steps:[
+        {q:"停下来。深呼吸三次。你在这里。", s:"祈求光照，让你看清今天。"},
+        {q:"今天发生了什么？你感恩什么？", s:"你在哪里感受到神的同在？你感谢什么？"},
+        {q:"今天什么让你感到沉重？你带着怎样的情绪？", s:"把这些感受带入静默中。"},
+        {q:"选择今天的一个时刻，静静地停留在那里。", s:"留出空间为此写一段简短的祷告。"},
+        {q:"你想带着什么进入明天？你想放下什么？", s:"把明天交托给你所信任的手。"}
+      ],
+      inputPlaceholder:"写下你想到的...", continueBtn:"继续",
+      todoStepLabel:"第 6 步", todoEyebrow:"与反思分开", todoHeading:"你明天需要做什么？",
+      todoItem1:"给妈妈打电话", todoItem2:"完成演示文稿", todoAdd:"添加任务", todoNewItem:"新任务", todoFinish:"完成",
+      closingHeading:"反思已完成", closingNote:"如果不保存，关闭后此反思将被删除。",
+      historyEmpty:"你还没有保存的反思。",
+      premiumTitle:"拓展你的练习", premiumFreeLabel:"永久免费", premiumPaidLabel:"扩展层",
+      freeFeatures:["晚间反思的五个步骤","明日待办事项","一般与灵性层","保存在设备上"],
+      paidFeatures:["AI 静默之镜","每周回顾","祈祷文库","跨设备同步"],
+      periodMonthly:"按月", periodYearly:"按年", periodOnce:"一次性",
+      prices:{monthly:"¥30 / 月", yearly:"¥240 / 年", once:"¥450 一次性"},
+      priceCents:{monthly:3000, yearly:24000, once:45000}, currency:"CNY",
+      choosePlan:"继续", continueFree:"免费继续",
+      aiReflect:"映照",
+      aiMirror:{
+        short:[
+          "你只写了几个字。想再多停留一会儿，还是今天到此为止？",
+          "字不多，但也许已经够了。还想再补充些什么吗？",
+          "简短明了。这里面有你想说的全部吗？"
+        ],
+        medium:[
+          "看起来你在这里停顿了。你写的内容中，什么感觉最重要？",
+          "你描述得挺详细的。哪一部分对你来说感觉最强烈？",
+          "看得出你认真想过这个。想在其中某部分再多停留一会儿吗？"
+        ],
+        long:[
+          "你写了不少。有没有哪一部分你想再多停留一会儿？",
+          "你在这里描述了很多。这些内容中你感受最深的是什么？",
+          "一下子写了很多。不必全部处理——只需关注现在最重要的部分。"
+        ],
+        fallback:"再多留一会儿，陪伴你写下的内容。不需要再添加什么。"
+      },
+      authHeading:"创建账户", authLoginTab:"登录", authSignupTab:"创建账户",
+      emailPlaceholder:"你的邮箱", passwordPlaceholder:"密码", authForgot:"忘记密码？",
+      authContinue:"继续", authError:"请填写邮箱和密码",
+      authConfirmPending:"请检查邮箱确认账户，然后再登录。",
+      checkoutTitle:"订单摘要", checkoutPlanLabel:"套餐", checkoutPriceLabel:"价格", checkoutRenewLabel:"续订",
+      checkoutRenewAuto:"自动续订", checkoutRenewOnce:"一次性付款，不续订",
+      checkoutDemoNote:"演示模式 — 未连接支付网关", checkoutConfirm:"确认并激活",
+      successHeading:"高级版已激活", successPlanLabel:"套餐", successNextLabel:"下次付款", successNoRenewal:"不续订", successContinue:"继续使用应用",
+      manageActiveLabel:"高级版有效", managePlanLabel:"套餐", managePriceLabel:"价格", manageNextLabel:"下次付款",
+      manageBackBtn:"返回应用", manageCancelBtn:"取消订阅", manageCancelled:"订阅已取消",
+      saveBtn:"保存", deleteBtn:"删除", caption:"视觉识别与交互概念", dir:"ltr", fontSerif:"'Noto Serif SC', serif", fontSans:"'Noto Sans SC', sans-serif" },
+
+    ar:{ introTap:"المس للدخول", claim:"فحص الضمير المسائي للقديس إغناطيوس دي لويولا", day:"الجمعة", date:"١٣ يوليو",
+      toggleGeneral:"عام", toggleSpiritual:"روحي", cta:"ابدأ تأمل المساء",
+      stepLabel:n=>`الخطوة ${n} من 5`,
+      steps:[
+        {q:"توقف. تنفس بعمق ثلاث مرات. أنت هنا.", s:"اطلب النور لترى يومك بوضوح."},
+        {q:"ماذا حدث اليوم؟ على ماذا أنت ممتن؟", s:"أين شعرت بقرب الله؟ على ماذا تشكر؟"},
+        {q:"ما الذي أثقل كاهلك اليوم؟ ما المشاعر التي حملتها؟", s:"أحضر هذه المشاعر إلى الصمت."},
+        {q:"اختر لحظة واحدة من اليوم وابقَ معها قليلاً.", s:"مساحة لكتابة صلاة قصيرة حولها."},
+        {q:"ماذا تريد أن تحمل معك إلى الغد؟ ماذا تريد أن تترك؟", s:"سلّم الغد إلى أيدٍ تثق بها."}
+      ],
+      inputPlaceholder:"اكتب ما يخطر ببالك...", continueBtn:"متابعة",
+      todoStepLabel:"الخطوة 6", todoEyebrow:"منفصلة عن التأمل", todoHeading:"ماذا تحتاج أن تفعل غدًا؟",
+      todoItem1:"الاتصال بأمي", todoItem2:"إنهاء العرض التقديمي", todoAdd:"إضافة مهمة", todoNewItem:"مهمة جديدة", todoFinish:"إنهاء",
+      closingHeading:"اكتمل التأمل", closingNote:"بدون الحفظ، سيتم حذف هذا التأمل عند الإغلاق.",
+      historyEmpty:"ليس لديك أي تأملات محفوظة بعد.",
+      premiumTitle:"وسّع ممارستك", premiumFreeLabel:"مجاني إلى الأبد", premiumPaidLabel:"الطبقة الموسعة",
+      freeFeatures:["خطوات التأمل المسائي الخمس","مهام الغد","الطبقة العامة والروحية","الحفظ على الجهاز"],
+      paidFeatures:["المرآة الصامتة بالذكاء الاصطناعي","المراجعة الأسبوعية","مكتبة الصلوات","المزامنة بين الأجهزة"],
+      periodMonthly:"شهريًا", periodYearly:"سنويًا", periodOnce:"مرة واحدة",
+      prices:{monthly:"4$ شهريًا", yearly:"32$ سنويًا", once:"60$ لمرة واحدة"},
+      priceCents:{monthly:400, yearly:3200, once:6000}, currency:"USD",
+      choosePlan:"متابعة", continueFree:"المتابعة مجانًا",
+      aiReflect:"انعكاس",
+      aiMirror:{
+        short:[
+          "كتبتَ بضع كلمات فقط. هل تريد البقاء مع هذا قليلاً أكثر، أم يكفي لليوم؟",
+          "كلمات قليلة، لكن ربما تكفي. هل تريد إضافة شيء آخر؟",
+          "موجز ومباشر. هل يحتوي على كل ما أردت قوله؟"
+        ],
+        medium:[
+          "يبدو أنك توقفتَ هنا. ما الذي يبدو أكثر أهمية فيما كتبته؟",
+          "وصفتَ هذا بشيء من التفصيل. أي جزء يبدو أقوى بالنسبة لك؟",
+          "يظهر أنك فكرت في هذا جيدًا. هل تريد البقاء أطول عند جزء منه؟"
+        ],
+        long:[
+          "كتبتَ الكثير. هل هناك جزء تود البقاء معه قليلاً أكثر؟",
+          "وصفتَ الكثير هنا. ما الذي تشعر به أكثر من بين كل هذا؟",
+          "هذا كثير دفعة واحدة. لا داعي لمعالجته كله — فقط ما هو الأهم الآن."
+        ],
+        fallback:"ابقَ قليلاً مع ما كتبته. لا حاجة لإضافة أي شيء آخر."
+      },
+      authHeading:"أنشئ حسابك", authLoginTab:"تسجيل الدخول", authSignupTab:"إنشاء حساب",
+      emailPlaceholder:"بريدك الإلكتروني", passwordPlaceholder:"كلمة المرور", authForgot:"نسيت كلمة المرور؟",
+      authContinue:"متابعة", authError:"يرجى إدخال البريد الإلكتروني وكلمة المرور",
+      authConfirmPending:"تحقق من بريدك الإلكتروني لتأكيد الحساب، ثم سجّل الدخول.",
+      checkoutTitle:"ملخص الطلب", checkoutPlanLabel:"الخطة", checkoutPriceLabel:"السعر", checkoutRenewLabel:"التجديد",
+      checkoutRenewAuto:"يتجدد تلقائيًا", checkoutRenewOnce:"دفعة واحدة، بدون تجديد",
+      checkoutDemoNote:"وضع تجريبي — بدون بوابة دفع فعلية", checkoutConfirm:"تأكيد وتفعيل",
+      successHeading:"تم تفعيل بريميوم", successPlanLabel:"الخطة", successNextLabel:"الدفعة القادمة", successNoRenewal:"بدون تجديد", successContinue:"المتابعة إلى التطبيق",
+      manageActiveLabel:"بريميوم مفعّل", managePlanLabel:"الخطة", managePriceLabel:"السعر", manageNextLabel:"الدفعة القادمة",
+      manageBackBtn:"العودة إلى التطبيق", manageCancelBtn:"إلغاء الاشتراك", manageCancelled:"تم إلغاء الاشتراك",
+      saveBtn:"حفظ", deleteBtn:"حذف", caption:"مفهوم الهوية البصرية والتفاعل", dir:"rtl", fontSerif:"'Noto Naskh Arabic', serif", fontSans:"'Noto Sans Arabic', sans-serif" }
+  };
+
+  let currentLang = 'cs';
+  let currentPeriod = 'monthly';
+  let isPremium = false;
+  let authMode = 'login';
+  let stepIndex = 0;
+
+  function applyLanguage(lang){
+    currentLang = lang;
+    const t = dict[lang];
+    document.documentElement.style.setProperty('--serif', t.fontSerif);
+    document.documentElement.style.setProperty('--sans', t.fontSans);
+    document.getElementById('screen').setAttribute('dir', t.dir);
+    document.body.setAttribute('dir', t.dir);
+
+    document.getElementById('introTap').textContent = t.introTap;
+    document.getElementById('introClaim').textContent = t.claim;
+    const locale = localeMap[lang] || 'en-US';
+    const today = new Date();
+    document.getElementById('homeDay').textContent = new Intl.DateTimeFormat(locale, { weekday:'long' }).format(today);
+    document.getElementById('homeDate').textContent = new Intl.DateTimeFormat(locale, { day:'numeric', month:'long' }).format(today);
+    document.getElementById('historyEmpty').textContent = t.historyEmpty;
+    document.getElementById('toggleGeneralBtn').textContent = t.toggleGeneral;
+    document.getElementById('toggleSpiritualBtn').textContent = t.toggleSpiritual;
+    document.getElementById('ctaBtn').textContent = t.cta;
+    document.getElementById('stepInput').placeholder = t.inputPlaceholder;
+    document.getElementById('aiBadgeLabel').textContent = t.paidFeatures[0];
+    document.getElementById('aiReflectBtn').textContent = t.aiReflect;
+    document.getElementById('stepNext').textContent = t.continueBtn;
+    document.getElementById('todoStepLabel').textContent = t.todoStepLabel;
+    document.getElementById('todoEyebrow').textContent = t.todoEyebrow;
+    document.getElementById('todoHeading').textContent = t.todoHeading;
+    // todo defaults are only set on resetSteps() (new session), not on language switch,
+    // so we never overwrite text the user is actively editing
+    document.getElementById('todoAddLabel').textContent = t.todoAdd;
+    document.getElementById('todoFinishBtn').textContent = t.todoFinish;
+    document.getElementById('closingHeading').textContent = t.closingHeading;
+    document.getElementById('closingNote').textContent = t.closingNote;
+    document.getElementById('saveBtn').textContent = t.saveBtn;
+    document.getElementById('deleteBtn').textContent = t.deleteBtn;
+    document.getElementById('caption').textContent = t.caption;
+
+    document.getElementById('authHeading').textContent = t.authHeading;
+    document.getElementById('authLoginBtn').textContent = t.authLoginTab;
+    document.getElementById('authSignupBtn').textContent = t.authSignupTab;
+    document.getElementById('authEmail').placeholder = t.emailPlaceholder;
+    document.getElementById('authPassword').placeholder = t.passwordPlaceholder;
+    document.getElementById('authForgot').textContent = t.authForgot;
+    document.getElementById('authError').textContent = t.authError;
+    document.getElementById('authContinueBtn').textContent = t.authContinue;
+
+    document.getElementById('checkoutTitle').textContent = t.checkoutTitle;
+    document.getElementById('checkoutPlanLabel').textContent = t.checkoutPlanLabel;
+    document.getElementById('checkoutPriceLabel').textContent = t.checkoutPriceLabel;
+    document.getElementById('checkoutRenewLabel').textContent = t.checkoutRenewLabel;
+    document.getElementById('checkoutDemoNote').textContent = t.checkoutDemoNote;
+    document.getElementById('checkoutConfirmLabel').textContent = t.checkoutConfirm;
+
+    document.getElementById('successHeading').textContent = t.successHeading;
+    document.getElementById('successPlanLabel').textContent = t.successPlanLabel;
+    document.getElementById('successNextLabel').textContent = t.successNextLabel;
+    document.getElementById('successContinueBtn').textContent = t.successContinue;
+
+    document.getElementById('manageActiveLabel').textContent = t.manageActiveLabel;
+    document.getElementById('managePlanLabel').textContent = t.managePlanLabel;
+    document.getElementById('managePriceLabel').textContent = t.managePriceLabel;
+    document.getElementById('manageNextLabel').textContent = t.manageNextLabel;
+    document.getElementById('manageBackBtn').textContent = t.manageBackBtn;
+    document.getElementById('manageCancelBtn').textContent = t.manageCancelBtn;
+
+    if(isPremium){ renderManageView(); }
+
+    document.getElementById('premiumTitle').textContent = t.premiumTitle;
+    document.getElementById('premiumFreeLabel').textContent = t.premiumFreeLabel;
+    document.getElementById('premiumPaidLabel').textContent = t.premiumPaidLabel;
+    document.getElementById('periodMonthlyBtn').textContent = t.periodMonthly;
+    document.getElementById('periodYearlyBtn').textContent = t.periodYearly;
+    document.getElementById('periodOnceBtn').textContent = t.periodOnce;
+    document.getElementById('choosePlanBtn').textContent = t.choosePlan;
+    document.getElementById('continueFreeBtn').textContent = t.continueFree;
+
+    const freeList = document.getElementById('freeFeatureList');
+    freeList.innerHTML = '';
+    t.freeFeatures.forEach(f=>{
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="fi">&#10003;</span><span></span>';
+      li.lastElementChild.textContent = f;
+      freeList.appendChild(li);
+    });
+
+    const paidList = document.getElementById('paidFeatureList');
+    paidList.innerHTML = '';
+    t.paidFeatures.forEach(f=>{
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="fi">&#10022;</span><span></span>';
+      li.lastElementChild.textContent = f;
+      paidList.appendChild(li);
+    });
+
+    updatePriceDisplay();
+
+    renderStep();
+  }
+
+  document.getElementById('langSelect').addEventListener('change', (e)=>{
+    applyLanguage(e.target.value);
+  });
+
+  // page ambient stars
+  const pageStars = document.getElementById('pageStars');
+  for(let i=0;i<40;i++){
+    const s = document.createElement('div');
+    s.className='page-star';
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.animationDelay = (Math.random()*5)+'s';
+    pageStars.appendChild(s);
+  }
+  // intro stars
+  const introStars = document.getElementById('introStars');
+  for(let i=0;i<22;i++){
+    const s = document.createElement('div');
+    s.className='star';
+    s.style.left = Math.random()*100+'%';
+    s.style.top = (Math.random()*55)+'%';
+    s.style.animationDelay = (1.6 + Math.random()*1.4)+'s';
+    introStars.appendChild(s);
+  }
+
+  const screenEl = document.getElementById('screen');
+  function showScene(id){
+    document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  document.querySelectorAll('[data-go]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if(el.dataset.reset) resetSteps();
+      showScene(el.dataset.go);
+    });
+  });
+
+  document.getElementById('intro').addEventListener('click', ()=> showScene('home'));
+  setTimeout(()=>{ if(document.getElementById('intro').classList.contains('active')) showScene('home'); }, 5400);
+
+  // mode toggle
+  document.querySelectorAll('[data-toggle] button').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      document.querySelectorAll('[data-toggle] button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      screenEl.classList.toggle('mode-spiritual', btn.dataset.mode==='spiritual');
+    });
+  });
+
+  const stepDots = document.getElementById('stepDots');
+  for(let i=0;i<5;i++){ stepDots.appendChild(document.createElement('span')); }
+
+  function collectStepText(){
+    const written = [...document.querySelectorAll('#aiTranscript .written')].map(el => el.textContent);
+    const remaining = document.getElementById('stepInput').value.trim();
+    if(remaining) written.push(remaining);
+    return written.join('\n\n');
+  }
+
+  function renderStep(){
+    const t = dict[currentLang];
+    document.getElementById('stepLabel').textContent = t.stepLabel(stepIndex+1);
+    document.getElementById('stepQ').textContent = t.steps[stepIndex].q;
+    document.getElementById('stepQSpirit').textContent = t.steps[stepIndex].s;
+    [...stepDots.children].forEach((d,i)=> d.classList.toggle('on', i===stepIndex));
+    document.getElementById('stepInput').value = '';
+    document.getElementById('aiTranscript').innerHTML = '';
+    lastAiResponse = null;
+    document.getElementById('aiThinking').classList.remove('on');
+    document.getElementById('aiReflectBtn').disabled = false;
+  }
+  function makeTodoItem(value){
+    const item = document.createElement('div');
+    item.className = 'todo-item';
+    const bullet = document.createElement('span');
+    bullet.className = 'bullet';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = value || '';
+    input.placeholder = dict[currentLang].todoNewItem;
+    const del = document.createElement('button');
+    del.className = 'todo-del';
+    del.setAttribute('aria-label', 'x');
+    del.innerHTML = '&#10005;';
+    item.appendChild(bullet);
+    item.appendChild(input);
+    item.appendChild(del);
+    return item;
+  }
+
+  function resetSteps(){
+    stepIndex = 0;
+    currentAnswers = {};
+    currentTodos = [];
+    renderStep();
+    const list = document.getElementById('todoList');
+    list.innerHTML = '';
+    const t = dict[currentLang];
+    [t.todoItem1, t.todoItem2].forEach(txt=>{
+      list.appendChild(makeTodoItem(txt));
+    });
+  }
+
+  document.getElementById('stepNext').addEventListener('click', ()=>{
+    currentAnswers['step_' + (stepIndex+1)] = collectStepText();
+    stepIndex++;
+    if(stepIndex >= 5){ showScene('todo'); }
+    else { renderStep(); }
+  });
+
+  document.getElementById('todoAdd').addEventListener('click', ()=>{
+    const list = document.getElementById('todoList');
+    const item = makeTodoItem('');
+    list.appendChild(item);
+    item.querySelector('input').focus();
+  });
+
+  document.getElementById('todoList').addEventListener('click', (e)=>{
+    if(e.target.classList.contains('todo-del')){
+      e.target.closest('.todo-item').remove();
+    }
+  });
+
+  document.getElementById('todoFinishBtn').addEventListener('click', ()=>{
+    currentTodos = [...document.querySelectorAll('#todoList .todo-item input')]
+      .map(el => el.value.trim())
+      .filter(v => v.length > 0);
+  });
+
+  function updatePriceDisplay(){
+    document.getElementById('priceDisplay').textContent = dict[currentLang].prices[currentPeriod];
+  }
+  document.querySelectorAll('#periodToggle button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#periodToggle button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPeriod = btn.dataset.period;
+      updatePriceDisplay();
+    });
+  });
+
+  document.getElementById('aiReflectBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('stepInput');
+    const text = input.value.trim();
+    if(!text) { input.focus(); return; }
+
+    const btn = document.getElementById('aiReflectBtn');
+    const thinking = document.getElementById('aiThinking');
+    const transcript = document.getElementById('aiTranscript');
+
+    const words = text.split(/\s+/).length;
+    const m = dict[currentLang].aiMirror;
+    let pool;
+    if(words <= 6){ pool = m.short; }
+    else if(words <= 25){ pool = m.medium; }
+    else { pool = m.long; }
+
+    let choices = pool.filter(r => r !== lastAiResponse);
+    if(choices.length === 0) choices = pool;
+    const response = choices[Math.floor(Math.random() * choices.length)];
+    lastAiResponse = response;
+
+    btn.disabled = true;
+    input.disabled = true;
+    thinking.classList.add('on');
+
+    setTimeout(()=>{
+      thinking.classList.remove('on');
+      btn.disabled = false;
+      input.disabled = false;
+
+      const entry = document.createElement('div');
+      entry.className = 'transcript-entry';
+      const written = document.createElement('div');
+      written.className = 'written';
+      written.textContent = text;
+      const mirror = document.createElement('div');
+      mirror.className = 'ai-response';
+      mirror.textContent = response;
+      entry.appendChild(written);
+      entry.appendChild(mirror);
+      transcript.appendChild(entry);
+
+      input.value = '';
+      input.focus();
+      entry.scrollIntoView({ behavior:'smooth', block:'end' });
+    }, 900);
+  });
+
+  /* ---------- SUBSCRIPTION FLOW ---------- */
+  function formatDate(d){
+    return d.toLocaleDateString(currentLang === 'cs' ? 'cs-CZ' : currentLang, {day:'numeric', month:'numeric', year:'numeric'});
+  }
+  function nextBillingLabel(){
+    if(currentPeriod === 'once') return dict[currentLang].successNoRenewal;
+    const d = new Date();
+    if(currentPeriod === 'monthly') d.setMonth(d.getMonth()+1);
+    else d.setFullYear(d.getFullYear()+1);
+    return formatDate(d);
+  }
+  function renewalLabel(){
+    return currentPeriod === 'once' ? dict[currentLang].checkoutRenewOnce : dict[currentLang].checkoutRenewAuto;
+  }
+  function planLabel(){
+    const t = dict[currentLang];
+    return currentPeriod === 'monthly' ? t.periodMonthly : currentPeriod === 'yearly' ? t.periodYearly : t.periodOnce;
+  }
+
+  function renderManageView(){
+    document.getElementById('pitchView').classList.add('hidden');
+    document.getElementById('manageView').classList.add('on');
+    document.getElementById('managePlanValue').textContent = planLabel();
+    document.getElementById('managePriceValue').textContent = dict[currentLang].prices[currentPeriod];
+    document.getElementById('manageNextValue').textContent = nextBillingLabel();
+  }
+  function renderPitchView(){
+    document.getElementById('manageView').classList.remove('on');
+    document.getElementById('pitchView').classList.remove('hidden');
+  }
+
+  let currentUser = null;
+  let currentSubscriptionId = null;
+
+  function nextBillingDate(){
+    if(currentPeriod === 'once') return null;
+    const d = new Date();
+    if(currentPeriod === 'monthly') d.setMonth(d.getMonth()+1);
+    else d.setFullYear(d.getFullYear()+1);
+    return d.toISOString();
+  }
+
+  async function checkActiveSubscription(userId){
+    const { data, error } = await sb.from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending:false })
+      .limit(1)
+      .maybeSingle();
+    if(error){ console.error(error); return null; }
+    return data;
+  }
+
+  // Step 1: choose plan -> go to account screen
+  document.getElementById('choosePlanBtn').addEventListener('click', ()=>{
+    showScene('account');
+  });
+
+  // Auth tabs (login / signup)
+  document.querySelectorAll('.auth-tabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.auth-tabs button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      authMode = btn.dataset.auth;
+    });
+  });
+
+  // Step 2: account form -> real Supabase auth -> checkout, or straight to manage if already subscribed
+  document.getElementById('authContinueBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    const pass = document.getElementById('authPassword').value.trim();
+    const err = document.getElementById('authError');
+    const btn = document.getElementById('authContinueBtn');
+    if(!email || !pass){
+      err.textContent = dict[currentLang].authError;
+      err.classList.add('on');
+      return;
+    }
+    err.classList.remove('on');
+    btn.disabled = true;
+
+    const authCall = authMode === 'signup'
+      ? sb.auth.signUp({ email, password: pass })
+      : sb.auth.signInWithPassword({ email, password: pass });
+
+    const { data, error } = await authCall;
+    btn.disabled = false;
+
+    if(error){
+      err.textContent = error.message;
+      err.classList.add('on');
+      return;
+    }
+
+    if(!data.session){
+      err.textContent = dict[currentLang].authConfirmPending;
+      err.classList.add('on');
+      return;
+    }
+
+    currentUser = data.user;
+
+    const existing = await checkActiveSubscription(currentUser.id);
+    if(existing){
+      isPremium = true;
+      currentSubscriptionId = existing.id;
+      showScene('premium');
+      renderManageView();
+      return;
+    }
+
+    document.getElementById('checkoutPlanValue').textContent = planLabel();
+    document.getElementById('checkoutPriceValue').textContent = dict[currentLang].prices[currentPeriod];
+    document.getElementById('checkoutRenewValue').textContent = renewalLabel();
+    showScene('checkout');
+  });
+
+  // Step 3: checkout confirm -> write real subscription row -> success screen
+  document.getElementById('checkoutConfirmBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('checkoutConfirmBtn');
+    const label = document.getElementById('checkoutConfirmLabel');
+    const spinner = document.getElementById('checkoutSpinner');
+    btn.disabled = true;
+    label.style.display = 'none';
+    spinner.classList.add('on');
+
+    const t = dict[currentLang];
+    const { data, error } = await sb.from('subscriptions').insert({
+      user_id: currentUser.id,
+      plan: currentPeriod,
+      status: 'active',
+      price_cents: t.priceCents[currentPeriod],
+      currency: t.currency,
+      current_period_end: nextBillingDate()
+    }).select().single();
+
+    spinner.classList.remove('on');
+    label.style.display = '';
+    btn.disabled = false;
+
+    if(error){
+      console.error(error);
+      const errEl = document.getElementById('checkoutError');
+      errEl.textContent = error.message;
+      errEl.classList.add('on');
+      return;
+    }
+
+    currentSubscriptionId = data.id;
+    isPremium = true;
+    document.getElementById('successPlanValue').textContent = planLabel();
+    document.getElementById('successNextValue').textContent = nextBillingLabel();
+    showScene('premiumSuccess');
+  });
+
+  // Step 4: cancel subscription from manage view -> real update
+  document.getElementById('manageCancelBtn').addEventListener('click', async ()=>{
+    if(currentSubscriptionId){
+      await sb.from('subscriptions').update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString()
+      }).eq('id', currentSubscriptionId);
+    }
+    isPremium = false;
+    currentSubscriptionId = null;
+    renderPitchView();
+    showScene('home');
+  });
+
+  // Save reflection to Supabase (only when logged in); otherwise send to premium flow
+  document.getElementById('saveBtn').addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    if(!currentUser){
+      showScene('premium');
+      renderPitchView();
+      return;
+    }
+    const btn = document.getElementById('saveBtn');
+    const errEl = document.getElementById('saveError');
+    errEl.classList.remove('on');
+    btn.disabled = true;
+
+    currentAnswers['step_5'] = currentAnswers['step_5'] ?? collectStepText();
+    const { error } = await sb.from('reflections').insert({
+      user_id: currentUser.id,
+      mode: screenEl.classList.contains('mode-spiritual') ? 'spiritual' : 'general',
+      answers: currentAnswers,
+      todo_items: currentTodos
+    });
+
+    btn.disabled = false;
+    if(error){
+      console.error(error);
+      errEl.textContent = error.message;
+      errEl.classList.add('on');
+      return;
+    }
+    showScene('home');
+  });
+
+  // Reset auth form + go to premium in pitch or manage state depending on isPremium
+  document.querySelectorAll('[data-go="premium"]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.getElementById('authEmail').value = '';
+      document.getElementById('authPassword').value = '';
+      document.getElementById('authError').classList.remove('on');
+      if(isPremium){ renderManageView(); } else { renderPitchView(); }
+    });
+  });
+
+  /* ---------- HISTORY ---------- */
+  let historyMonthOffset = 0;
+  let historyEntries = [];
+
+  function monthRange(offset){
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + offset);
+    const start = new Date(d.getFullYear(), d.getMonth(), 1);
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    return { start, end, label: d };
+  }
+
+  async function loadHistory(){
+    const { start, end, label } = monthRange(historyMonthOffset);
+    const locale = localeMap[currentLang] || 'en-US';
+    document.getElementById('historyMonthLabel').textContent =
+      new Intl.DateTimeFormat(locale, { month:'long', year:'numeric' }).format(label);
+
+    const list = document.getElementById('historyList');
+    const empty = document.getElementById('historyEmpty');
+    list.innerHTML = '';
+
+    if(!currentUser){ empty.classList.add('on'); return; }
+
+    const { data, error } = await sb.from('reflections')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .gte('entry_date', start.toISOString().slice(0,10))
+      .lt('entry_date', end.toISOString().slice(0,10))
+      .order('entry_date', { ascending:false });
+
+    if(error){ console.error(error); empty.classList.add('on'); return; }
+    historyEntries = data || [];
+
+    if(historyEntries.length === 0){
+      empty.classList.add('on');
+      return;
+    }
+    empty.classList.remove('on');
+
+    historyEntries.forEach(entry=>{
+      const item = document.createElement('button');
+      item.className = 'history-item';
+      const dateEl = document.createElement('div');
+      dateEl.className = 'h-date';
+      dateEl.textContent = new Intl.DateTimeFormat(locale, { day:'numeric', month:'long', weekday:'short' }).format(new Date(entry.entry_date));
+      const previewEl = document.createElement('div');
+      previewEl.className = 'h-preview';
+      const firstAnswer = Object.values(entry.answers || {}).find(v => v && v.trim());
+      previewEl.textContent = firstAnswer || '—';
+      item.appendChild(dateEl);
+      item.appendChild(previewEl);
+      item.addEventListener('click', ()=> openHistoryDetail(entry));
+      list.appendChild(item);
+    });
+  }
+
+  function openHistoryDetail(entry){
+    const locale = localeMap[currentLang] || 'en-US';
+    document.getElementById('historyDetailDate').textContent =
+      new Intl.DateTimeFormat(locale, { day:'numeric', month:'long', year:'numeric' }).format(new Date(entry.entry_date));
+
+    const content = document.getElementById('historyDetailContent');
+    content.innerHTML = '';
+    const t = dict[currentLang];
+
+    for(let i=0; i<5; i++){
+      const key = 'step_' + (i+1);
+      const answer = entry.answers ? entry.answers[key] : null;
+      if(!answer) continue;
+      const block = document.createElement('div');
+      block.className = 'history-block';
+      const q = document.createElement('div');
+      q.className = 'h-q';
+      q.textContent = t.steps[i].q;
+      const a = document.createElement('div');
+      a.className = 'h-a';
+      a.textContent = answer;
+      block.appendChild(q);
+      block.appendChild(a);
+      content.appendChild(block);
+    }
+
+    if(entry.todo_items && entry.todo_items.length){
+      const block = document.createElement('div');
+      block.className = 'history-block';
+      const q = document.createElement('div');
+      q.className = 'h-q';
+      q.textContent = t.todoHeading;
+      const ul = document.createElement('ul');
+      ul.className = 'history-todo-list';
+      entry.todo_items.forEach(txt=>{
+        const li = document.createElement('li');
+        li.textContent = txt;
+        ul.appendChild(li);
+      });
+      block.appendChild(q);
+      block.appendChild(ul);
+      content.appendChild(block);
+    }
+
+    showScene('historyDetail');
+  }
+
+  document.getElementById('historyBtn').addEventListener('click', ()=>{
+    if(!currentUser){
+      showScene('premium');
+      renderPitchView();
+      return;
+    }
+    historyMonthOffset = 0;
+    loadHistory();
+    showScene('history');
+  });
+
+  document.getElementById('historyPrevBtn').addEventListener('click', ()=>{
+    historyMonthOffset--;
+    loadHistory();
+  });
+  document.getElementById('historyNextBtn').addEventListener('click', ()=>{
+    historyMonthOffset++;
+    loadHistory();
+  });
+
+  applyLanguage('cs');
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(err => console.error('SW registration failed:', err));
+    });
+  }
+</script>
+
+</body>
+</html>
